@@ -236,6 +236,19 @@ function App() {
     const testScoreLabel = testResult ? `${testResult.correct} / ${testResult.total}` : "";
     const testDurationLabel = testResult ? formatDuration(testResult.durationMs) : "";
 
+    const feedbackNode = feedback
+        ? (
+            <p className={`app__feedback${feedbackType ? ` app__feedback--${feedbackType}` : ""}`}>
+                {feedback}
+            </p>
+        )
+        : null;
+    const headerMessageContent = isRevealed
+        ? (selectedCountyName
+            ? <span className="app__header-label">{selectedCountyName}</span>
+            : feedbackNode)
+        : feedbackNode;
+
     const clearHighlights = useCallback(() => {
         const container = svgRef.current;
         if (!container) return;
@@ -301,7 +314,7 @@ function App() {
                 testCorrectRef.current = nextCorrect;
                 setTestCorrect(nextCorrect);
                 if (testQueueLength <= 1) {
-                    finishTest(nextCorrect, {skipAdvance: true});
+                    finishTest(nextCorrect);
                     return;
                 }
             }
@@ -327,7 +340,7 @@ function App() {
                 return {stats: updatedStats, currentCounty: prev.currentCounty};
             });
             if (isTestMode && testQueueLength <= 1) {
-                finishTest(testCorrectRef.current, {skipAdvance: true});
+                finishTest(testCorrectRef.current);
                 return;
             }
             setFeedback(`That was ${guess}. Try again.`);
@@ -458,35 +471,40 @@ function App() {
 
 
     const handleMapClick = useCallback(
-        (event) => {
-            const path = event.target.closest("path");
-            if (!path) return;
-            const guess = path.id;
-            if (!COUNTY_SET.has(guess)) return;
-            if (isRevealed) {
-                setSelectedCountyName(guess);
-                const container = svgRef.current;
-                if (container) {
-                    container.querySelectorAll(".is-last-clicked").forEach((node) => {
-                        node.classList.remove("is-last-clicked");
-                    });
-                }
-                path.classList.add("is-last-clicked");
-                return;
+    (event) => {
+        const path = event.target.closest("path");
+        if (!path) return;
+        const guess = path.id;
+        if (!COUNTY_SET.has(guess)) return;
+        if (isRevealed) {
+            const container = svgRef.current;
+            if (container) {
+                container.querySelectorAll(".is-last-clicked").forEach((node) => {
+                    node.classList.remove("is-last-clicked");
+                });
             }
-            setSelectedCountyName(guess);
-            clearHighlights();
-            path.classList.add("is-last-clicked");
-            if (!currentCounty) return;
             if (guess === currentCounty) {
-                path.classList.remove("is-last-clicked");
-                path.classList.add("is-selected");
-                handleCorrect(currentCounty);
+                setSelectedCountyName("");
             } else {
-                handleIncorrect(currentCounty, guess);
+                setSelectedCountyName(guess);
             }
-        },
-        [clearHighlights, currentCounty, handleCorrect, handleIncorrect, isRevealed],
+            path.classList.add("is-last-clicked");
+            return;
+        }
+        clearHighlights();
+        path.classList.add("is-last-clicked");
+        if (!currentCounty) return;
+        if (guess === currentCounty) {
+            setSelectedCountyName("");
+            path.classList.remove("is-last-clicked");
+            path.classList.add("is-selected");
+            handleCorrect(currentCounty);
+        } else {
+            setSelectedCountyName("");
+            handleIncorrect(currentCounty, guess);
+        }
+    },
+    [clearHighlights, currentCounty, handleCorrect, handleIncorrect, isRevealed],
     );
 
     useEffect(() => {
@@ -598,14 +616,9 @@ function App() {
             <header className="app__header">
                 <div className="app__header-top">
                     <h1 className="app__title">Where is {currentCounty}?</h1>
-                    <button type="button" className="stats-button" onClick={openStats}>
-                        Stats
-                    </button>
                 </div>
-                <div className="app__header-actions">
-                    <button type="button" className="test-button" onClick={handleTestButton}>
-                        {testButtonLabel}
-                    </button>
+                <div className="app__header-message" aria-live="polite">
+                    {headerMessageContent}
                 </div>
             </header>
             <main className="app__main">
@@ -614,21 +627,15 @@ function App() {
                 </div>
             </main>
             <footer className="app__footer">
-                <div className="app__footer-label" aria-live="polite">
-                    {isRevealed && selectedCountyName ? selectedCountyName : ""}
-                </div>
-                <div className="app__footer-row">
-                    <div className="app__footer-message">
-                        {feedback && (
-                            <p className={`app__feedback${feedbackType ? ` app__feedback--${feedbackType}` : ""}`}>
-                                {feedback}
-                            </p>
-                        )}
-                    </div>
-                    <button type="button" className="app__action" onClick={handleShowOrNext}>
-                        {isRevealed ? "Next" : "Show"}
-                    </button>
-                </div>
+                <button type="button" className="footer-button footer-button--stats" onClick={openStats}>
+                    Stats
+                </button>
+                <button type="button" className="footer-button footer-button--test" onClick={handleTestButton}>
+                    {testButtonLabel}
+                </button>
+                <button type="button" className="footer-button footer-button--action" onClick={handleShowOrNext}>
+                    {isRevealed ? "Next" : "Show"}
+                </button>
             </footer>
             {testResult && (
                 <div
