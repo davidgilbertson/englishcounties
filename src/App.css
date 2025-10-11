@@ -139,7 +139,7 @@
   width: 100%;
   max-width: 100%;
   max-height: calc(var(--viewport-height) - var(--map-chrome));
-  aspect-ratio: 1008 / 1345;
+  aspect-ratio: 1000 / 1300;
   margin: 0 auto;
 }
 
@@ -160,31 +160,30 @@
     touch-action: manipulation;
 }
 
-.map path {
+.map svg g#counties path {
     cursor: pointer;
-    transition: stroke-width 0.2s ease, fill 0.2s ease;
+    transition: fill 0.2s ease;
 }
 
-g#counties path:is(:hover, :focus-visible) {
-    fill: #666 !important;
+.map svg g#counties path {
+    fill: #cfd8dc;
+    stroke: #646464;
 }
 
-.map path.is-selected {
-    fill: #bbf7d0 !important;
-    stroke: #166534 !important;
-    stroke-width: 1.6 !important;
+.map svg g#counties path:is(:hover, :focus-visible) {
+    fill: #b0bec5;
 }
 
-.map path.is-last-clicked {
-    fill: #e2e8f0 !important;
-    stroke: #475569 !important;
-    stroke-width: 1.6 !important;
+.map svg g#counties path.is-selected {
+    fill: #90a4ae;
 }
 
-.map path.is-revealed {
-    fill: #e91e63 !important;
-    stroke: #880e4f !important;
-    stroke-width: 1.6 !important;
+.map svg g#counties path.is-last-clicked {
+    fill: #90a4ae;
+}
+
+.map svg g#counties path.is-revealed {
+    fill: #e91e63;
 }
 
 @media (min-width: 768px) {

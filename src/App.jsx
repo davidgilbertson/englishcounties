@@ -209,6 +209,7 @@ function App() {
     const [testStartTime, setTestStartTime] = useState(null);
     const [testResult, setTestResult] = useState(null);
     const testCorrectRef = useRef(0);
+    const actionButtonRef = useRef(null);
 
     useEffect(() => {
         testCorrectRef.current = testCorrect;
@@ -268,6 +269,12 @@ function App() {
             }
         }
         revealedRef.current = null;
+    }, []);
+
+    const focusActionButton = useCallback(() => {
+        const node = actionButtonRef.current;
+        if (!node) return;
+        node.focus();
     }, []);
 
     const finishTest = useCallback((finalCorrect, options = {}) => {
@@ -476,6 +483,7 @@ function App() {
         if (!path) return;
         const guess = path.id;
         if (!COUNTY_SET.has(guess)) return;
+        focusActionButton();
         if (isRevealed) {
             const container = svgRef.current;
             if (container) {
@@ -504,7 +512,7 @@ function App() {
             handleIncorrect(currentCounty, guess);
         }
     },
-    [clearHighlights, currentCounty, handleCorrect, handleIncorrect, isRevealed],
+    [clearHighlights, currentCounty, focusActionButton, handleCorrect, handleIncorrect, isRevealed],
     );
 
     useEffect(() => {
@@ -633,7 +641,12 @@ function App() {
                 <button type="button" className="footer-button footer-button--test" onClick={handleTestButton}>
                     {testButtonLabel}
                 </button>
-                <button type="button" className="footer-button footer-button--action" onClick={handleShowOrNext}>
+                <button
+                    ref={actionButtonRef}
+                    type="button"
+                    className="footer-button footer-button--action"
+                    onClick={handleShowOrNext}
+                >
                     {isRevealed ? "Next" : "Show"}
                 </button>
             </footer>
