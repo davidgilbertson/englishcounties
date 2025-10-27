@@ -754,7 +754,7 @@ function App() {
                                                 />
                                             </div>
                                             <div className="stats-data">
-                                                {percent}% ({correct}/{attempts})
+                                                {correct}/{attempts}
                                             </div>
                                         </div>
                                     );
