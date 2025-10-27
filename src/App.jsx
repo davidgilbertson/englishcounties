@@ -209,7 +209,34 @@ function App() {
     const [testStartTime, setTestStartTime] = useState(null);
     const [testResult, setTestResult] = useState(null);
     const testCorrectRef = useRef(0);
+    const testMissesRef = useRef(new Set());
     const actionButtonRef = useRef(null);
+
+    useEffect(() => {
+        if (typeof window === "undefined" || typeof document === "undefined") return undefined;
+        const root = document.documentElement;
+        const updateViewportHeight = () => {
+            const viewport = window.visualViewport;
+            const scale = viewport?.scale ?? 1;
+            const height = viewport ? viewport.height * scale : window.innerHeight;
+            root.style.setProperty("--viewport-height", `${height}px`);
+        };
+        updateViewportHeight();
+        window.addEventListener("resize", updateViewportHeight);
+        window.addEventListener("orientationchange", updateViewportHeight);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener("resize", updateViewportHeight);
+        }
+        document.addEventListener("visibilitychange", updateViewportHeight);
+        return () => {
+            window.removeEventListener("resize", updateViewportHeight);
+            window.removeEventListener("orientationchange", updateViewportHeight);
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener("resize", updateViewportHeight);
+            }
+            document.removeEventListener("visibilitychange", updateViewportHeight);
+        };
+    }, []);
 
     useEffect(() => {
         testCorrectRef.current = testCorrect;
@@ -284,15 +311,19 @@ function App() {
         setIsTestMode(false);
         setTestQueue([]);
         setTestStartTime(null);
-        testCorrectRef.current = finalCorrect;
-        setTestCorrect(finalCorrect);
-        const percent = TOTAL_COUNTIES === 0 ? 0 : Math.round((finalCorrect / TOTAL_COUNTIES) * 100);
+        const missCount = testMissesRef.current.size;
+        const cappedCorrect = Math.min(finalCorrect, TOTAL_COUNTIES - missCount);
+        testCorrectRef.current = cappedCorrect;
+        setTestCorrect(cappedCorrect);
+        const percent = TOTAL_COUNTIES === 0 ? 0 : Math.round((cappedCorrect / TOTAL_COUNTIES) * 100);
         setTestResult({
-            correct: finalCorrect,
+            correct: cappedCorrect,
             total: TOTAL_COUNTIES,
             percent,
             durationMs,
+            wrong: TOTAL_COUNTIES - cappedCorrect,
         });
+        testMissesRef.current = new Set();
         setIsRevealed(false);
         setFeedback("");
         setFeedbackType(null);
@@ -317,11 +348,14 @@ function App() {
                 return {stats: updatedStats, currentCounty: prev.currentCounty};
             });
             if (isTestMode) {
-                const nextCorrect = testCorrectRef.current + 1;
-                testCorrectRef.current = nextCorrect;
-                setTestCorrect(nextCorrect);
+                const alreadyMissed = testMissesRef.current.has(county);
+                if (!alreadyMissed) {
+                    const nextCorrect = testCorrectRef.current + 1;
+                    testCorrectRef.current = nextCorrect;
+                    setTestCorrect(nextCorrect);
+                }
                 if (testQueueLength <= 1) {
-                    finishTest(nextCorrect);
+                    finishTest(testCorrectRef.current);
                     return;
                 }
             }
@@ -346,9 +380,15 @@ function App() {
                 persistStats(updatedStats);
                 return {stats: updatedStats, currentCounty: prev.currentCounty};
             });
-            if (isTestMode && testQueueLength <= 1) {
-                finishTest(testCorrectRef.current);
-                return;
+            if (isTestMode) {
+                const misses = testMissesRef.current;
+                if (county && !misses.has(county)) {
+                    misses.add(county);
+                }
+                if (testQueueLength <= 1) {
+                    finishTest(testCorrectRef.current);
+                    return;
+                }
             }
             setFeedback(`That was ${guess}. Try again.`);
             setFeedbackType("error");
@@ -383,6 +423,7 @@ function App() {
         setTestQueue(order);
         testCorrectRef.current = 0;
         setTestCorrect(0);
+        testMissesRef.current = new Set();
         setTestStartTime(Date.now());
         setTestResult(null);
         setSelectedCountyName("");
@@ -397,6 +438,7 @@ function App() {
         setIsTestMode(false);
         setTestQueue([]);
         testCorrectRef.current = 0;
+        testMissesRef.current = new Set();
         setTestCorrect(0);
         setTestStartTime(null);
         setTestResult(null);
@@ -421,6 +463,7 @@ function App() {
         setTestCorrect(0);
         setTestQueue([]);
         setTestStartTime(null);
+        testMissesRef.current = new Set();
         setSelectedCountyName("");
     }, []);
 
